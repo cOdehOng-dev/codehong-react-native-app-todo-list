@@ -5,8 +5,6 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Dimensions, ScrollView, StatusBar } from "react-native";
 import Input from "./components/Input";
 import { useState } from "react";
-import IconButton from "./components/IconButton";
-import { images } from "./image";
 import Task from "./components/Task";
 
 export default function App() {
@@ -20,13 +18,36 @@ export default function App() {
     4: { id: "4", text: "Edit TODO Item", completed: false },
   });
 
+  /**
+   * 추가
+   * ID 생성 → 새로운 Task 객체 생성 → 기존 tasks 객체와 병합 → 상태 업데이트
+   */
   const _addTask = () => {
     const ID = Date.now().toString();
     const newTaskObject = {
       [ID]: { id: ID, text: newTask, completed: false },
     };
-    setNewTask('');
+    setNewTask("");
     setTasks({ ...tasks, ...newTaskObject });
+  };
+
+  /**
+   * 삭제
+   *  tasks (원본) → 복사 → id 삭제 → setTasks로 상태 업데이트
+   * @param {*} id
+   */
+  const _deletTask = (id) => {
+    // Object.assign({}, tasks) : tasks 객체를 얕은 복사(shallow copy) 해서 새 객체 생성
+    // 원본 tasks를 직접 수정하지 않기 위해 복사본을 만드는 것 (불변성 유지)
+    const currentTask = Object.assign({}, tasks);
+    delete currentTask[id];
+    setTasks(currentTask);
+  };
+
+  const _toggleTask = (id) => {
+    const currentTask = Object.assign({}, tasks);
+    currentTask[id]["completed"] = !currentTask[id]["completed"];
+    setTasks(currentTask);
   };
 
   const _handleTextChange = (text) => {
@@ -65,7 +86,12 @@ export default function App() {
             {Object.values(tasks)
               .reverse()
               .map((item) => (
-                 <Task key={item.id} text={item.text} />
+                <Task
+                  key={item.id}
+                  item={item}
+                  deleteTask={_deletTask}
+                  toggleTask={_toggleTask}
+                />
               ))}
           </ScrollView>
         </SafeAreaView>

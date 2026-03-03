@@ -5,22 +5,42 @@ import IconButton from "./IconButton";
 import { images } from "../image";
 import PropTypes from "prop-types";
 
-const Task = ({ text }) => {
+const Task = ({ item, deleteTask, toggleTask }) => {
   return (
     <View style={styles.container}>
-      <IconButton type={images.uncompleted} />
-      <Text style={styles.contents}>{text}</Text>
-      <IconButton type={images.update} />
-      <IconButton type={images.delete} />
+      <IconButton
+        type={item.completed ? images.completed : images.uncompleted}
+        id={item.id}
+        onPressOut={toggleTask}
+        completed={item.completed}
+      />
+      <Text
+        style={[
+          styles.contents,
+          {
+            color: item.completed ? theme.done : theme.text,
+            textDecorationLine: item.completed ? "line-through" : "none",
+          },
+        ]}
+      >
+        {item.text}
+      </Text>
+      {item.completed || <IconButton type={images.update} />}
+      <IconButton
+        type={images.delete}
+        id={item.id}
+        onPressOut={deleteTask}
+        completed={item.completed}
+      />
     </View>
   );
 };
 
-Task.prototype = {
-  text: PropTypes.string.isRequired,
+Task.propTypes = {
+  item: PropTypes.object.isRequired,
+  deleteTask: PropTypes.func.isRequired,
+  toggleTask: PropTypes.func.isRequired,
 };
-
-export default Task;
 
 const styles = StyleSheet.create({
   container: {
@@ -34,6 +54,7 @@ const styles = StyleSheet.create({
   contents: {
     flex: 1,
     fontSize: 24,
-    color: theme.text,
   },
 });
+
+export default Task;
