@@ -6,17 +6,28 @@ import { Dimensions, ScrollView, StatusBar } from "react-native";
 import Input from "./components/Input";
 import { useState } from "react";
 import Task from "./components/Task";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import AppLoading from "expo-app-loading";
 
 export default function App() {
   const width = Dimensions.get("window").width;
-  const [newTask, setNewTask] = useState("");
 
-  const [tasks, setTasks] = useState({
-    1: { id: "1", text: "Hanbit", completed: false },
-    2: { id: "2", text: "React Native", completed: true },
-    3: { id: "3", text: "React Native Sample", completed: false },
-    4: { id: "4", text: "Edit TODO Item", completed: false },
-  });
+  const [isReady, setIsReady] = useState(false);
+  const [newTask, setNewTask] = useState("");
+  const [tasks, setTasks] = useState({});
+
+  const _saveTasks = async (tasks) => {
+    try {
+      await AsyncStorage.setItem("tasks", JSON.stringify(tasks));
+      setTasks(tasks); // 상태 업데이트로 UI 즉시 반영
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  const _loadTasks = async () => {
+    const loadedTasks = await AsyncStorage.getItem("tasks");
+    setTasks(JSON.parse(loadedTasks) || {});
+  };
 
   /**
    * 추가
@@ -28,7 +39,7 @@ export default function App() {
       [ID]: { id: ID, text: newTask, completed: false },
     };
     setNewTask("");
-    setTasks({ ...tasks, ...newTaskObject });
+    _saveTasks({ ...tasks, ...newTaskObject });
   };
 
   /**
@@ -41,20 +52,30 @@ export default function App() {
     // 원본 tasks를 직접 수정하지 않기 위해 복사본을 만드는 것 (불변성 유지)
     const currentTask = Object.assign({}, tasks);
     delete currentTask[id];
-    setTasks(currentTask);
+    _saveTasks(currentTask);
   };
 
   const _toggleTask = (id) => {
     const currentTask = Object.assign({}, tasks);
     currentTask[id]["completed"] = !currentTask[id]["completed"];
-    setTasks(currentTask);
+    _saveTasks(currentTask);
+  };
+
+  const _updateTask = (item) => {
+    const currentTask = Object.assign({}, tasks);
+    currentTask[item.id] = item;
+    _saveTasks(currentTask);
   };
 
   const _handleTextChange = (text) => {
     setNewTask(text);
   };
 
-  return (
+  const _onBlur = () => {
+    setNewTask("");
+  };
+
+  return isReady? (
     <SafeAreaProvider>
       <ThemeProvider theme={theme}>
         <SafeAreaView
@@ -72,10 +93,11 @@ export default function App() {
           />
           <Title />
           <Input
-            placeholder="+ Add a Task"
-            value={newTask}
-            onChangeText={_handleTextChange}
-            onSubmitEditing={_addTask}
+            placeholder="+ Add a Task" // 입력창에 표시되는 안내 문구
+            value={newTask} // 입력창에 표시되는 현재 텍스트 상태
+            onChangeText={_handleTextChange} // 텍스트 변경 시 newTask 상태 업데이트
+            onSubmitEditing={_addTask} // 키보드 완료 버튼 클릭 시 task 추가
+            onBlur={_onBlur} // 입력창 포커스 해제 시 newTask 초기화
           />
           <ScrollView
             style={{
@@ -91,11 +113,18 @@ export default function App() {
                   item={item}
                   deleteTask={_deletTask}
                   toggleTask={_toggleTask}
+                  updateTask={_updateTask}
                 />
               ))}
           </ScrollView>
         </SafeAreaView>
       </ThemeProvider>
     </SafeAreaProvider>
-  );
+  ) : (
+    <AppLoading 
+      startAsync={_loadTasks} // 앱 로딩 시 실행할 비동기 함수
+      onFinish={() => setIsReady(true)} // 로딩 완료 시 isReady 상태를 true로 설정
+      onError={console.warn} // 로딩 중 에러 발생 시 콘솔에 경고 메시지 출력
+    />
+  )
 }
